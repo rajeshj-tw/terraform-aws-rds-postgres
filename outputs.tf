@@ -43,13 +43,6 @@ output "db_instance_name" {
   value       = aws_db_instance.rds.db_name
 }
 
-output "db_instance_username" {
-  description = "The master username for the database"
-  value       = aws_db_instance.rds.username
-  sensitive   = true
-}
-
-
 output "db_instance_port" {
   description = "The database port"
   value       = aws_db_instance.rds.port

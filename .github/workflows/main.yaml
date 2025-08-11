@@ -1,0 +1,68 @@
+name: Terraform CI
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ "**" ]
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    env:
+      # Plugin cache for faster provider downloads
+      TF_PLUGIN_CACHE_DIR: ${{ runner.temp }}/.terraform.d/plugin-cache
+      # Safe dummy AWS values so provider config doesn't error in plan/validate
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: example
+      AWS_SECRET_ACCESS_KEY: example
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        id: setup
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.12.2
+          terraform_wrapper: false
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: terraform-${{ runner.os }}-1.9.5-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            terraform-${{ runner.os }}-1.9.5-
+            terraform-${{ runner.os }}-
+
+      - name: Prepare plugin cache dir
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
+      - name: Terraform fmt (check)
+        run: terraform fmt -check -recursive -diff
+
+      - name: Terraform init (root)
+        run: terraform init -backend=false
+
+      - name: Terraform validate (root)
+        run: terraform validate
+
+      - name: Terraform init/validate (modules and examples)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for d in modules/* examples/*; do
+            [ -d "$d" ] || continue
+            echo "::group::${d}"
+            terraform -chdir="$d" init -backend=false
+            terraform -chdir="$d" validate
+            echo "::endgroup::"
+          done
+
+      - name: Terraform test
+        # terraform test discovers tests in ./tests by default
+        run: terraform test -no-color

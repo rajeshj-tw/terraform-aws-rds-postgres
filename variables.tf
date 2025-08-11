@@ -3,8 +3,8 @@ variable "identifier" {
   type        = string
 
   validation {
-    condition     = can(regex("^[a-zA-Z][a-zA-Z0-9-]*$", var.identifier))
-    error_message = "Identifier must start with a letter and contain only alphanumeric characters and hyphens."
+    condition     = length(var.identifier) >= 1 && length(var.identifier) <= 63 && can(regex("^[a-z][a-z0-9-]*$", var.identifier)) && !can(regex("--", var.identifier)) && !can(regex("-$", var.identifier))
+    error_message = "identifier must be 1–63 chars, start with a letter, contain only lowercase letters, digits, and hyphens, must not end with a hyphen or contain consecutive hyphens."
   }
 }
 
@@ -12,6 +12,11 @@ variable "engine_name" {
   description = "The name of the database engine to use"
   default     = "postgres"
   type        = string
+
+  validation {
+    condition     = var.engine_name == "postgres"
+    error_message = "engine_name must be 'postgres' for this module."
+  }
 }
 
 variable "engine_version" {
@@ -42,6 +47,11 @@ variable "allocated_storage" {
   default     = 20
 
   validation {
+    condition     = var.allocated_storage > 0
+    error_message = "allocated_storage must be > 0."
+  }
+
+  validation {
     condition     = var.allocated_storage >= 20 && var.allocated_storage <= 65536
     error_message = "Allocated storage must be between 20 and 65536 GB."
   }
@@ -53,8 +63,8 @@ variable "max_allocated_storage" {
   default     = 100
 
   validation {
-    condition     = var.max_allocated_storage >= var.allocated_storage
-    error_message = "Max allocated storage must be greater than or equal to allocated storage."
+    condition     = var.max_allocated_storage == 0 || var.max_allocated_storage >= var.allocated_storage
+    error_message = "max_allocated_storage must be 0 (disabled) or >= allocated_storage."
   }
 }
 
@@ -164,7 +174,7 @@ variable "parameters" {
 variable "option_group_name" {
   description = "Name of the option group to associate"
   type        = string
-  default     = null
+  default     = false
 }
 
 variable "publicly_accessible" {
@@ -284,8 +294,8 @@ variable "performance_insights_retention_period" {
   default     = 7
 
   validation {
-    condition     = contains([7, 31, 62, 93, 124, 155, 186, 217, 248, 279, 310, 341, 372, 403, 434, 465, 496, 527, 558, 589, 620, 651, 682, 713, 731], var.performance_insights_retention_period)
-    error_message = "Performance Insights retention period must be 7 days or a multiple of 31 days up to 731 days."
+    condition     = contains([7, 30, 60, 120], var.performance_insights_retention_period)
+    error_message = "Performance Insights retention period must be one among 7, 30, 60, and 120 days."
   }
 }
 
