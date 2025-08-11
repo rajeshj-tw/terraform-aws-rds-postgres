@@ -1,9 +1,6 @@
 provider "aws" {
   region          = "us-west-2"
 }
-test {
-  parallel        = false
-}
 variables {
   identifier      = "test-rds-instance"
 
