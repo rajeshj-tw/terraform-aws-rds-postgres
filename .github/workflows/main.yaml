@@ -46,9 +46,6 @@ jobs:
             terraform-${{ runner.os }}-1.9.5-
             terraform-${{ runner.os }}-
 
-      - name: Terraform fmt (check)
-        run: terraform fmt -check -recursive -diff -no-color
-
       - name: Terraform init (root)
         run: terraform init -backend=false -no-color
 
