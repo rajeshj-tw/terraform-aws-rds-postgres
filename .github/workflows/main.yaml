@@ -41,9 +41,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: terraform-${{ runner.os }}-1.9.5-${{ hashFiles('**/.terraform.lock.hcl') }}
+          key: terraform-${{ runner.os }}-1.12.2-${{ hashFiles('**/.terraform.lock.hcl') }}
           restore-keys: |
-            terraform-${{ runner.os }}-1.9.5-
+            terraform-${{ runner.os }}-1.12.2-
             terraform-${{ runner.os }}-
 
       - name: Terraform init (root)
