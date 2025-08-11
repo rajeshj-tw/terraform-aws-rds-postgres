@@ -1,4 +1,5 @@
 name: Terraform CI
+
 on:
   push:
     branches: [ main, master ]
@@ -8,13 +9,17 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: terraform-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   terraform:
     runs-on: ubuntu-latest
     env:
-      # Plugin cache for faster provider downloads
-      TF_PLUGIN_CACHE_DIR: ${{ runner.temp }}/.terraform.d/plugin-cache
-      # Safe dummy AWS values so provider config doesn't error in plan/validate
+      # Use a fixed path on Ubuntu runners for the plugin cache
+      TF_PLUGIN_CACHE_DIR: /home/runner/.terraform.d/plugin-cache
+      # Safe placeholders so provider config doesn't error during validate/test
       AWS_DEFAULT_REGION: us-east-1
       AWS_ACCESS_KEY_ID: example
       AWS_SECRET_ACCESS_KEY: example
@@ -24,11 +29,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Terraform
-        id: setup
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.12.2
+          terraform_version: 1.9.5
           terraform_wrapper: false
+
+      - name: Prepare plugin cache dir
+        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
 
       - name: Cache Terraform providers
         uses: actions/cache@v4
@@ -39,17 +46,14 @@ jobs:
             terraform-${{ runner.os }}-1.9.5-
             terraform-${{ runner.os }}-
 
-      - name: Prepare plugin cache dir
-        run: mkdir -p "$TF_PLUGIN_CACHE_DIR"
-
       - name: Terraform fmt (check)
-        run: terraform fmt -check -recursive -diff
+        run: terraform fmt -check -recursive -diff -no-color
 
       - name: Terraform init (root)
-        run: terraform init -backend=false
+        run: terraform init -backend=false -no-color
 
       - name: Terraform validate (root)
-        run: terraform validate
+        run: terraform validate -no-color
 
       - name: Terraform init/validate (modules and examples)
         shell: bash
@@ -58,11 +62,10 @@ jobs:
           for d in modules/* examples/*; do
             [ -d "$d" ] || continue
             echo "::group::${d}"
-            terraform -chdir="$d" init -backend=false
-            terraform -chdir="$d" validate
+            terraform -chdir="$d" init -backend=false -no-color
+            terraform -chdir="$d" validate -no-color
             echo "::endgroup::"
           done
 
       - name: Terraform test
-        # terraform test discovers tests in ./tests by default
         run: terraform test -no-color
